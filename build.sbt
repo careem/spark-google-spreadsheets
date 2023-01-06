@@ -1,3 +1,4 @@
+import scala.util.Properties
 name := "spark-google-spreadsheets"
 
 organization := "com.github.potix2"
@@ -6,7 +7,7 @@ scalaVersion := "2.12.13"
 
 crossScalaVersions := Seq("2.12.13")
 
-version := "0.7.1-SNAPSHOT"
+version := "0.7.1-CAREEM"
 
 spName := "potix2/spark-google-spreadsheets"
 
@@ -16,7 +17,7 @@ spIncludeMaven := true
 
 spIgnoreProvided := true
 
-sparkVersion := "3.2.0"
+sparkVersion := "3.3.0"
 
 val testSparkVersion = settingKey[String]("The version of Spark to test against.")
 
@@ -55,13 +56,17 @@ publishArtifact in Test := false
 
 pomIncludeRepository := { _ => false }
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (version.value.endsWith("SNAPSHOT"))
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
+credentials += Credentials(
+  realm = "Artifactory Realm",
+  host = "artifactory-pro.careem-internal.com",
+  userName = Properties.envOrElse("ARTIFACT_USER", ""),
+  passwd = Properties.envOrElse("ARTIFACT_PASS", "")
+)
+
+publishMavenStyle := true
+
+publishTo := Some("Artifactory Realm" at "https://artifactory-pro.careem-internal.com/artifactory/sbt-local")
+
 
 pomExtra := (
   <url>https://github.com/potix2/spark-google-spreadsheets</url>
@@ -81,6 +86,9 @@ pomExtra := (
 test in assembly := {}
 
 import ReleaseTransformations._
+import sbt.Credentials
+
+import scala.util.Properties
 
 // Add publishing to spark packages as another step.
 releaseProcess := Seq[ReleaseStep](
@@ -96,3 +104,8 @@ releaseProcess := Seq[ReleaseStep](
   pushChanges,
   releaseStepTask(spPublish)
 )
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", _*) => MergeStrategy.discard
+  case _                        => MergeStrategy.first
+}
